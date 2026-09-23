@@ -1,0 +1,7 @@
+{# A client with no address sends its DISCOVER from 0.0.0.0 to the broadcast
+   address, and the inbound SVI ACL sees it before the relay does. Without these
+   two lines the segmentation policy silently denies the segment its own
+   addresses: the broadcast for the initial lease, the unicast for the renewal. #}
+{% macro dhcp_permit(network, wildcard) %} permit udp host 0.0.0.0 host 255.255.255.255 eq bootps
+ permit udp {{ network }} {{ wildcard }} host {{ dhcp_server }} eq bootps
+{%- endmacro %}

@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Campus lab — three-tier design, verified before deployment</title>
+<style>
+  :root {
+    --bg: #0f1216;
+    --panel: #161b22;
+    --panel-2: #1c2230;
+    --line: #2a3140;
+    --text: #e6e9ef;
+    --muted: #97a1b2;
+    --accent: #4da3ff;
+    --ok: #3fb950;
+    --deny: #f85149;
+    --warn: #d29922;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.5 "Inter", "Segoe UI", system-ui, sans-serif;
+  }
+  header { padding: 28px 32px 18px; border-bottom: 1px solid var(--line); }
+  h1 { margin: 0 0 6px; font-size: 21px; letter-spacing: -0.01em; }
+  header p { margin: 0; color: var(--muted); max-width: 70ch; font-size: 14px; }
+  header a { color: var(--accent); }
+  .wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 480px); gap: 0; }
+  @media (max-width: 1000px) { .wrap { grid-template-columns: 1fr; } }
+  .left { padding: 22px 32px 60px; border-right: 1px solid var(--line); }
+  .right { padding: 22px 24px 60px; background: var(--panel); min-width: 0; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted);
+       margin: 26px 0 10px; font-weight: 600; }
+  h2:first-child { margin-top: 0; }
+  svg { width: 100%; height: auto; display: block; }
+  .node rect { fill: var(--panel-2); stroke: var(--line); stroke-width: 1.5; cursor: pointer; }
+  .node:hover rect { stroke: var(--accent); }
+  .node.selected rect { stroke: var(--accent); stroke-width: 2.5; fill: #1d2a3d; }
+  .node text { fill: var(--text); font-size: 13px; font-weight: 600; pointer-events: none; }
+  .node text.sub { fill: var(--muted); font-size: 10.5px; font-weight: 400; }
+  .link { stroke: #46506a; stroke-width: 2; }
+  .link.trunk { stroke: #46506a; }
+  .link.routed { stroke: #3f6fa8; stroke-dasharray: 6 4; }
+  .link.hl { stroke: var(--accent); stroke-width: 3; stroke-dasharray: none; }
+  .legend { display: flex; gap: 18px; flex-wrap: wrap; color: var(--muted); font-size: 12.5px;
+            margin-top: 8px; }
+  .legend span::before { content: ""; display: inline-block; width: 22px; height: 0;
+            border-top: 2px solid #46506a; vertical-align: middle; margin-right: 7px; }
+  .legend .routed::before { border-top-style: dashed; border-color: #3f6fa8; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { border: 1px solid var(--line); padding: 7px 9px; text-align: left; }
+  th { color: var(--muted); font-weight: 600; background: var(--panel); font-size: 12px; }
+  td.cell { cursor: pointer; text-align: center; font-weight: 600; letter-spacing: .02em; }
+  td.cell:hover { outline: 2px solid var(--accent); outline-offset: -2px; }
+  td.allow { color: var(--ok); }
+  td.deny { color: var(--deny); }
+  td.mismatch { background: #3a1d1d; }
+  .tag { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 11px;
+         border: 1px solid var(--line); color: var(--muted); }
+  pre { background: #0b0e12; border: 1px solid var(--line); border-radius: 6px; padding: 12px;
+        overflow: auto; max-height: 460px; font-size: 12px; line-height: 1.45;
+        font-family: "JetBrains Mono", "SF Mono", Consolas, monospace; }
+  .hint { color: var(--muted); font-size: 13px; }
+  .pill { display: inline-block; font-size: 11.5px; padding: 2px 8px; border-radius: 4px;
+          border: 1px solid var(--line); margin: 0 6px 6px 0; color: var(--muted); }
+  .pill b { color: var(--text); font-weight: 600; }
+  footer { padding: 18px 32px 40px; color: var(--muted); font-size: 12.5px;
+           border-top: 1px solid var(--line); max-width: 95ch; }
+  footer a { color: var(--accent); }
+  button.tab { background: var(--panel-2); color: var(--muted); border: 1px solid var(--line);
+    padding: 5px 11px; border-radius: 5px; cursor: pointer; font-size: 12.5px; margin-right: 6px; }
+  button.tab[aria-selected="true"] { color: var(--text); border-color: var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Campus lab — a three-tier design that has to prove itself before it ships</h1>
+  <p>Every switch, link and policy cell below is read from the same model the configurations are
+  generated from, and every allow/deny is the answer <a href="https://batfish.org">Batfish</a>
+  returned when it was asked about the generated configuration — not a diagram anyone drew by
+  hand. Click a device for its config; click a policy cell for the trace behind it.
+  <a href="https://github.com/tburchj/Engineering-Studies">Source</a>.</p>
+</header>
+
+<div class="wrap">
+  <div class="left">
+    <h2>Topology</h2>
+    <svg id="topo" viewBox="0 0 800 470" role="img" aria-label="Campus topology"></svg>
+    <div class="legend">
+      <span class="trunk">802.1Q trunk</span>
+      <span class="routed">routed /31, OSPF area 0</span>
+    </div>
+
+    <h2>Segmentation policy, as verified</h2>
+    <div id="matrix"></div>
+    <p class="hint" id="matrix-note"></p>
+  </div>
+
+  <div class="right">
+    <div id="detail"></div>
+  </div>
+</div>
+
+<footer>
+  These are Cisco IOS-XE configurations for Catalyst 9300/9500/8300 platforms, analysed
+  formally by Batfish. They have not been applied to physical Catalyst hardware, and this is
+  not a production network. Implementation was AI-assisted; the design, the failure modes it
+  guards against and the verification criteria are mine.
+  &nbsp;—&nbsp; Timothy Burch,
+  <a href="https://github.com/tburchj">github.com/tburchj</a>
+</footer>
+
+<script>
+const NS = "http://www.w3.org/2000/svg";
+let DATA = null, selectedDevice = null, selectedCell = null;
+
+fetch("data.json").then(r => r.json()).then(data => {
+  DATA = data;
+  drawTopology();
+  drawMatrix();
+  showIntro();
+});
+
+function el(tag, attrs, text) {
+  const node = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+function drawTopology() {
+  const svg = document.getElementById("topo");
+  svg.innerHTML = "";
+  const pos = {};
+  DATA.devices.forEach(d => { pos[d.name] = { x: d.x, y: d.y }; });
+
+  DATA.links.forEach(link => {
+    const a = pos[link.a], b = pos[link.b];
+    const line = el("line", {
+      x1: a.x + 75, y1: a.y + 26, x2: b.x + 75, y2: b.y + 26,
+      class: `link ${link.kind}`,
+      "data-a": link.a, "data-b": link.b
+    });
+    line.appendChild(el("title", {},
+      `${link.a} ${link.a_interface} — ${link.b} ${link.b_interface}\n${link.detail}`));
+    svg.appendChild(line);
+  });
+
+  DATA.devices.forEach(d => {
+    const g = el("g", { class: "node", "data-name": d.name, transform: `translate(${d.x},${d.y})` });
+    g.appendChild(el("rect", { width: 150, height: 52, rx: 7 }));
+    g.appendChild(el("text", { x: 14, y: 22 }, d.name));
+    g.appendChild(el("text", { x: 14, y: 39, class: "sub" }, `${d.platform} · ${d.role}`));
+    g.addEventListener("click", () => selectDevice(d.name));
+    svg.appendChild(g);
+  });
+}
+
+function selectDevice(name) {
+  selectedDevice = name;
+  document.querySelectorAll(".node").forEach(n =>
+    n.classList.toggle("selected", n.dataset.name === name));
+  document.querySelectorAll(".link").forEach(l =>
+    l.classList.toggle("hl", l.dataset.a === name || l.dataset.b === name));
+
+  const d = DATA.devices.find(x => x.name === name);
+  const links = DATA.links.filter(l => l.a === name || l.b === name).map(l => {
+    const far = l.a === name ? l : { b: l.a, b_interface: l.a_interface };
+    const near = l.a === name ? l.a_interface : l.b_interface;
+    return `<div class="pill"><b>${near}</b> → ${far.b} ${far.b_interface} · ${l.detail}</div>`;
+  }).join("");
+
+  const roles = d.vlan_roles.length ? `
+    <h2>Per-VLAN role</h2>
+    <table><tr><th>VLAN</th><th>SVI</th><th>HSRP</th><th>Spanning tree</th></tr>
+    ${d.vlan_roles.map(r => `<tr><td>${r.vlan} ${r.name}</td><td>${r.address}</td>
+      <td style="color:${r.hsrp === "active" ? "var(--ok)" : "var(--muted)"}">${r.hsrp}</td>
+      <td style="color:${r.stp === "root" ? "var(--ok)" : "var(--muted)"}">${r.stp}</td></tr>`).join("")}
+    </table>
+    <p class="hint">HSRP active and spanning-tree root are the same switch for each VLAN, so
+    steady-state traffic never crosses the peer link to reach its own gateway.</p>` : "";
+
+  document.getElementById("detail").innerHTML = `
+    <h2>${d.name} — ${d.platform}</h2>
+    <div>${d.mgmt ? `<span class="pill">mgmt <b>${d.mgmt}</b></span>` : ""}
+         ${d.loopback ? `<span class="pill">loopback <b>${d.loopback}</b></span>` : ""}</div>
+    <h2>Links</h2><div>${links}</div>
+    ${roles}
+    <h2>Generated configuration</h2>
+    <p class="hint">Rendered from the model — nothing here was typed by hand.</p>
+    <pre>${escapeHtml(d.config)}</pre>`;
+}
+
+function drawMatrix() {
+  const dests = DATA.destinations;
+  let html = `<table><tr><th>from ↓ &nbsp; to →</th>${dests
+    .map(x => `<th>${x.label}<br><span class="tag">:${x.port}</span></th>`).join("")}</tr>`;
+  DATA.policy.forEach((row, ri) => {
+    html += `<tr><th>${row.source}<br><span class="tag">VLAN ${row.vlan}</span></th>`;
+    row.cells.forEach((cell, ci) => {
+      if (cell.same_segment) {
+        html += `<td style="text-align:center;color:var(--muted)" title="Same segment — never reaches the SVI the policy is applied to">—</td>`;
+        return;
+      }
+      const delivered = cell.delivered.dist01 && cell.delivered.dist02;
+      const cls = delivered ? "allow" : "deny";
+      const bad = cell.matches_intent ? "" : " mismatch";
+      html += `<td class="cell ${cls}${bad}" data-r="${ri}" data-c="${ci}">
+        ${delivered ? "allowed" : "blocked"}</td>`;
+    });
+    html += `</tr>`;
+  });
+  html += `</table>`;
+  const host = document.getElementById("matrix");
+  host.innerHTML = html;
+  host.querySelectorAll("td.cell").forEach(td =>
+    td.addEventListener("click", () => showCell(+td.dataset.r, +td.dataset.c)));
+
+  const judged = DATA.policy.flatMap(r => r.cells).filter(c => !c.same_segment);
+  const mismatches = judged.filter(c => !c.matches_intent).length;
+  document.getElementById("matrix-note").textContent = mismatches === 0
+    ? `All ${judged.length} cells match the written intent, at both distribution switches. `
+      + "Same-segment flows are marked — because they never reach the SVI the policy sits on."
+    : `${mismatches} cell(s) do not match the written intent — highlighted in red.`;
+}
+
+function showCell(ri, ci) {
+  const row = DATA.policy[ri], cell = row.cells[ci];
+  const trace = gw => `<h2>${gw}</h2><pre>${cell.traces[gw].join("\n")}\n\n→ ${
+    cell.dispositions[gw].join(", ")}</pre>`;
+  document.getElementById("detail").innerHTML = `
+    <h2>${row.source} → ${cell.destination}</h2>
+    <div><span class="pill">src <b>${row.src_ip}</b> (VLAN ${row.vlan})</span>
+         <span class="pill">dst <b>${cell.dst}:${cell.port}</b> TCP</span>
+         <span class="pill">intent <b>${cell.expected ? "allow" : "block"}</b></span></div>
+    <p class="hint">Traced at both distribution switches, because a policy enforced only on the
+    HSRP active gateway stops being enforced the moment it fails over.</p>
+    ${trace("dist01")}${trace("dist02")}`;
+}
+
+function showIntro() {
+  const total = DATA.policy.flatMap(r => r.cells).filter(c => !c.same_segment).length * 2;
+  document.getElementById("detail").innerHTML = `
+    <h2>Start here</h2>
+    <p class="hint">Click any device in the topology to read the configuration that was generated
+    for it, or any cell in the policy matrix to see the packet trace that proves it.</p>
+    <h2>What is being claimed</h2>
+    <p class="hint">Four VLANs across two access switches, a redundant distribution pair and a
+    core router. Rapid-PVST with root placement pinned to the HSRP active gateway per VLAN.
+    OSPF area 0 over routed /31 uplinks, with the distribution peer link routed rather than
+    trunked, so losing it is a routing event instead of a spanning-tree event. Inbound ACLs on
+    every user SVI, on <em>both</em> distribution switches.</p>
+    <h2>How it is checked</h2>
+    <p class="hint">${total} traces behind the matrix above, plus trunk allowed-VLAN agreement,
+    OSPF adjacency, HSRP consistency, undefined and unapplied ACLs, and the operability cases a
+    security control tends to break — DHCP from a client that has no address yet, and a local
+    login account to authenticate against. It runs in CI on every commit.</p>`;
+}
+
+function escapeHtml(s) {
+  return s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+}
+</script>
+</body>
+</html>

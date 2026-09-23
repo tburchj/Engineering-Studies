@@ -20,6 +20,11 @@ aaa new-model
 aaa authentication login default local
 aaa authorization exec default local
 !
+! Local fallback account. Without it, 'authentication login default local'
+! locks every operator out of the console the moment it is applied. The hash
+! is a placeholder replaced at deploy time from the credential store.
+username {{ local_admin.username }} privilege 15 secret 9 {{ local_admin.secret_hash }}
+!
 ip ssh version 2
 !
 {% for server in ntp_servers %}

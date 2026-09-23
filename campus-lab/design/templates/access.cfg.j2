@@ -39,7 +39,6 @@ interface {{ uplink.interface }}
  switchport trunk allowed vlan {{ vlans | map(attribute='id') | join(',') }}
  switchport nonegotiate
  ip dhcp snooping trust
- spanning-tree guard root
  no shutdown
 !
 {% endfor %}

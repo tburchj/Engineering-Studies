@@ -8,8 +8,12 @@ published page cannot show a topology or a policy the design does not actually h
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
+import subprocess
+import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 import yaml
@@ -85,6 +89,52 @@ def load_model() -> tuple[dict, dict]:
         for name in ROLES
     }
     return common, hosts
+
+
+def design_digest(common: dict, hosts: dict) -> str:
+    """SHA-256 of the normalised model, not of the files: whitespace and key order
+    do not change a design, and an approval bound to this digest is an approval of
+    exactly these values."""
+    canonical = json.dumps({"common": common, "hosts": hosts}, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode()).hexdigest()
+
+
+def build_digest() -> str:
+    digest = hashlib.sha256()
+    for path in sorted((BUILD / "configs").glob("*.cfg")):
+        digest.update(path.name.encode())
+        digest.update(path.read_bytes())
+    return digest.hexdigest()
+
+
+def commit_sha() -> str:
+    if sha := os.environ.get("GITHUB_SHA"):
+        return sha
+    result = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=LAB, capture_output=True, text=True, check=False
+    )
+    return result.stdout.strip() if result.returncode == 0 else "unknown"
+
+
+def provenance(common: dict, hosts: dict, test_count: int) -> dict:
+    return {
+        "design_sha256": design_digest(common, hosts),
+        "build_sha256": build_digest(),
+        "commit": commit_sha(),
+        "verified_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+        "tests": test_count,
+    }
+
+
+def count_tests() -> int:
+    result = subprocess.run(
+        [sys.executable, "-m", "pytest", "verify", "--collect-only", "-q"],
+        cwd=LAB,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return sum(1 for line in result.stdout.splitlines() if "::" in line)
 
 
 def build_links(hosts: dict) -> list[dict]:
@@ -245,6 +295,7 @@ def main() -> None:
             {"label": label, "ip": dst, "port": port} for label, dst, port in DESTINATIONS
         ],
         "policy": policy_matrix(session),
+        "provenance": provenance(common, hosts, count_tests()),
     }
     out = Path(__file__).resolve().parent / "data.json"
     out.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")

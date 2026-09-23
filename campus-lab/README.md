@@ -9,12 +9,12 @@ questions about it.
 The point is the last part. Anyone can write a VLAN and an ACL. The interesting question
 is how you know, before the change window, that the guest VLAN still cannot reach a
 biomedical device, that both distribution switches enforce that identically, and that the
-trunk you just edited still carries every VLAN on both ends. Here that is 62 tests that
-run in seven seconds:
+trunk you just edited still carries every VLAN on both ends. Here that is 92 tests that
+run in a quarter of a minute:
 
 ```
 $ pytest verify -q
-62 passed in 6.89s
+92 passed in 13.14s
 ```
 
 **[Click through it in a browser](https://tburchj.github.io/Engineering-Studies/)** — the
@@ -99,6 +99,9 @@ docker run -d --name batfish -p 9996:9996 -p 9997:9997 batfish/allinone
 | `verify/test_layer2.py` | allowed-VLAN lists that differ between the two ends of a trunk, access ports in a VLAN that does not exist, an access switch with no reachable management SVI |
 | `verify/test_routing.py` | OSPF adjacencies that will not come up, OSPF where it does not belong, missing or mismatched HSRP groups, STP root and HSRP active disagreeing |
 | `verify/test_segmentation.py` | every permitted and forbidden flow in the policy, evaluated at both distribution switches |
+| `verify/test_operability.py` | ACLs that block their own VLAN's DHCP, guest DNS that only works over UDP, root guard on a link that must accept the root, local AAA with no local account |
+| `verify/test_management_path.py` | the change cutting its own path back: every jump host is traced to every device's management address through both gateways, and `MGMT-ACCESS` is asked directly who it admits |
+| `verify/test_hygiene.py` | credential-shaped material in the committed build, a device with no `archive`/`log config` to roll back from or reconstruct a change with, HTTP or telnet on the management plane |
 
 The segmentation tests read as the policy itself:
 
@@ -107,6 +110,29 @@ The segmentation tests read as the policy itself:
 (WORKSTATION, MGMT_SWITCH, "22",  "switches are managed from the jump host only"),
 (BIOMED,      INTERNET,    "443", "biomed devices have no reason to reach the internet"),
 ```
+
+## Controls carried over from delivery work
+
+The lab borrows the habits of a change pipeline that has to be approved and audited, not
+just a configuration that has to be correct:
+
+- **The runner's path is a test, not an assumption.** The management ACL is generated
+  from the model's `jump_hosts`, and `test_management_path.py` proves those hosts can
+  reach every device before the change and would still reach it after a gateway failover.
+  The one failure a rollback cannot fix is the one that removed the path the rollback
+  needs.
+- **Every device records its own change.** `archive` with `log config` gives each device
+  a rollback point (`configure replace`) and a per-line syslog record of what was entered,
+  with keys hidden. Failed and successful logins are logged and brute force is throttled.
+- **The published page carries its provenance.** `site/export.py` writes a SHA-256 of the
+  normalised model (`design_sha256`), a SHA-256 of the five generated configurations
+  (`build_sha256`), the commit, the test count and the time of the CI run into
+  `data.json`, and the page prints them. An approval recorded against the design digest
+  is an approval of exactly those values; change one VLAN and the digest changes.
+- **The build is checked for what it must not contain.** `test_hygiene.py` fails on
+  anything shaped like a real hash, type-7 password, SNMP community or key string. The
+  only credential line in the build is the placeholder the credential store replaces at
+  deploy time.
 
 A troubleshooting walkthrough — what to look at, in what order, when each of these fails
 on real hardware — is in [`docs/troubleshooting.md`](docs/troubleshooting.md).

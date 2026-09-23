@@ -1,0 +1,31 @@
+---
+loopback: 10.255.0.2
+mgmt_address: 10.10.99.2
+# Lowest STP priority for the VLANs this switch is HSRP active for, so the
+# forwarding path and the default gateway are the same switch.
+stp_root_vlans: [10, 99]
+stp_secondary_vlans: [20, 30]
+svi_addresses:
+  10: 10.10.10.2
+  20: 10.10.20.2
+  30: 10.10.30.2
+  99: 10.10.99.2
+downlinks:
+  - interface: GigabitEthernet1/0/1
+    peer: acc01
+    peer_interface: GigabitEthernet1/0/49
+  - interface: GigabitEthernet1/0/2
+    peer: acc02
+    peer_interface: GigabitEthernet1/0/49
+peer_link:
+  interface: TenGigabitEthernet1/0/2
+  peer: dist02
+  peer_interface: TenGigabitEthernet1/0/2
+  address: 10.255.1.4
+  prefix_length: 31
+routed_links:
+  - interface: TenGigabitEthernet1/0/1
+    peer: core01
+    peer_interface: TenGigabitEthernet0/0/0
+    address: 10.255.1.1
+    prefix_length: 31

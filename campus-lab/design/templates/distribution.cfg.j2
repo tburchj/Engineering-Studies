@@ -1,0 +1,117 @@
+{% include '_common.j2' %}
+
+ip routing
+vtp mode transparent
+!
+{% for vlan in vlans %}
+vlan {{ vlan.id }}
+ name {{ vlan.name }}
+{% endfor %}
+!
+spanning-tree mode rapid-pvst
+spanning-tree loopguard default
+{% for vlan_id in stp_root_vlans %}
+spanning-tree vlan {{ vlan_id }} priority 4096
+{% endfor %}
+{% for vlan_id in stp_secondary_vlans %}
+spanning-tree vlan {{ vlan_id }} priority 8192
+{% endfor %}
+!
+! Guest traffic reaches the internet and nothing else on campus. The deny
+! lines come from internal_prefixes, so a new campus range is covered the
+! moment it is added to the model.
+ip access-list extended GUEST-IN
+ permit udp 10.10.30.0 0.0.0.255 host {{ (vlans | selectattr('id', 'equalto', 30) | first).gateway }} eq domain
+ permit udp 10.10.30.0 0.0.0.255 host {{ (vlans | selectattr('id', 'equalto', 30) | first).gateway }} eq bootps
+{% for prefix in internal_prefixes %}
+ deny   ip 10.10.30.0 0.0.0.255 {{ prefix | ipaddr('network') }} {{ prefix | ipaddr('hostmask') }} log
+{% endfor %}
+ permit ip 10.10.30.0 0.0.0.255 any
+ deny   ip any any log
+!
+! Biomed devices talk to their management servers in the data centre and to
+! nothing else. This is the segment an auditor asks about first.
+ip access-list extended BIOMED-IN
+ permit udp 10.10.20.0 0.0.0.255 host {{ ntp_servers[0] }} eq ntp
+ permit tcp 10.10.20.0 0.0.0.255 {{ datacenter_prefix | ipaddr('network') }} {{ datacenter_prefix | ipaddr('hostmask') }} eq 443
+ permit tcp 10.10.20.0 0.0.0.255 {{ datacenter_prefix | ipaddr('network') }} {{ datacenter_prefix | ipaddr('hostmask') }} eq 22
+{% for prefix in internal_prefixes %}
+ deny   ip 10.10.20.0 0.0.0.255 {{ prefix | ipaddr('network') }} {{ prefix | ipaddr('hostmask') }} log
+{% endfor %}
+ deny   ip any any log
+!
+! Workstations reach the data centre and the internet, but the management
+! network is reachable only from the jump host.
+ip access-list extended WORKSTATION-IN
+ deny   ip 10.10.10.0 0.0.0.255 {{ (vlans | selectattr('id', 'equalto', mgmt_vlan) | first).subnet | ipaddr('network') }} {{ (vlans | selectattr('id', 'equalto', mgmt_vlan) | first).subnet | ipaddr('hostmask') }} log
+ deny   ip 10.10.10.0 0.0.0.255 10.10.20.0 0.0.0.255 log
+ permit ip 10.10.10.0 0.0.0.255 any
+ deny   ip any any log
+!
+{% for downlink in downlinks %}
+interface {{ downlink.interface }}
+ description TRUNK TO {{ downlink.peer | upper }} {{ downlink.peer_interface }}
+ switchport mode trunk
+ switchport trunk allowed vlan {{ vlans | map(attribute='id') | join(',') }}
+ switchport nonegotiate
+ spanning-tree guard root
+ no shutdown
+!
+{% endfor %}
+interface {{ peer_link.interface }}
+ description L3 PEER LINK TO {{ peer_link.peer | upper }}
+ no switchport
+ ip address {{ peer_link.address }} {{ ('0.0.0.0/' ~ peer_link.prefix_length) | ipaddr('netmask') }}
+ ip ospf {{ ospf.process_id }} area {{ ospf.area }}
+ ip ospf network point-to-point
+ no shutdown
+!
+{% for link in routed_links %}
+interface {{ link.interface }}
+ description L3 UPLINK TO {{ link.peer | upper }} {{ link.peer_interface }}
+ no switchport
+ ip address {{ link.address }} {{ ('0.0.0.0/' ~ link.prefix_length) | ipaddr('netmask') }}
+ ip ospf {{ ospf.process_id }} area {{ ospf.area }}
+ ip ospf network point-to-point
+ no shutdown
+!
+{% endfor %}
+interface Loopback0
+ description ROUTER ID
+ ip address {{ loopback }} 255.255.255.255
+ ip ospf {{ ospf.process_id }} area {{ ospf.area }}
+!
+{% for vlan in vlans %}
+interface Vlan{{ vlan.id }}
+ description {{ vlan.name }} GATEWAY
+ ip address {{ svi_addresses[vlan.id] }} {{ ('0.0.0.0/' ~ vlan.prefix_length) | ipaddr('netmask') }}
+{% if vlan.id != mgmt_vlan %}
+ ip helper-address {{ name_servers[0] }}
+{% endif %}
+{% if vlan.name == 'GUEST' %}
+ ip access-group GUEST-IN in
+{% elif vlan.name == 'BIOMED' %}
+ ip access-group BIOMED-IN in
+{% elif vlan.name == 'WORKSTATION' %}
+ ip access-group WORKSTATION-IN in
+{% endif %}
+ ip ospf {{ ospf.process_id }} area {{ ospf.area }}
+ standby version 2
+ standby {{ vlan.hsrp_group }} ip {{ vlan.gateway }}
+ standby {{ vlan.hsrp_group }} priority {{ 110 if vlan.primary == inventory_hostname else 90 }}
+{% if vlan.primary == inventory_hostname %}
+ standby {{ vlan.hsrp_group }} preempt delay minimum 60
+{% endif %}
+ no shutdown
+!
+{% endfor %}
+router ospf {{ ospf.process_id }}
+ router-id {{ loopback }}
+ auto-cost reference-bandwidth {{ ospf.reference_bandwidth }}
+ passive-interface default
+ no passive-interface {{ peer_link.interface }}
+{% for link in routed_links %}
+ no passive-interface {{ link.interface }}
+{% endfor %}
+!
+{% include '_footer.j2' %}

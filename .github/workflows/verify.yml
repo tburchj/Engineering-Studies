@@ -1,0 +1,42 @@
+name: verify
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      batfish:
+        image: batfish/allinone
+        ports:
+          - 9996:9996
+          - 9997:9997
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install tooling
+        working-directory: campus-lab
+        run: |
+          pip install -r requirements.txt
+          ansible-galaxy collection install -r design/requirements.yml
+
+      - name: Lint the automation
+        working-directory: campus-lab
+        run: ansible-lint design/
+
+      - name: Render the configurations from the model
+        working-directory: campus-lab/design
+        run: ansible-playbook -i inventory.yml render.yml
+
+      - name: Fail if the committed configs drift from the model
+        run: git diff --exit-code campus-lab/build/
+
+      - name: Verify the design
+        working-directory: campus-lab
+        run: pytest verify -q

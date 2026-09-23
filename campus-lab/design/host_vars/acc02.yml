@@ -1,0 +1,26 @@
+---
+mgmt_address: 10.10.99.12
+stack_priority: 15
+uplinks:
+  - interface: GigabitEthernet1/0/49
+    peer: dist01
+    peer_interface: GigabitEthernet1/0/2
+  - interface: GigabitEthernet1/0/50
+    peer: dist02
+    peer_interface: GigabitEthernet1/0/2
+access_ports:
+  - prefix: GigabitEthernet1/0/
+    first: 1
+    last: 12
+    vlan: 10
+    description: WORKSTATION
+  - prefix: GigabitEthernet1/0/
+    first: 13
+    last: 18
+    vlan: 20
+    description: BIOMED
+  - prefix: GigabitEthernet1/0/
+    first: 19
+    last: 24
+    vlan: 30
+    description: GUEST

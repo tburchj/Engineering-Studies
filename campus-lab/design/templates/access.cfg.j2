@@ -1,0 +1,53 @@
+{% include '_common.j2' %}
+
+vtp mode transparent
+!
+{% for vlan in vlans %}
+vlan {{ vlan.id }}
+ name {{ vlan.name }}
+{% endfor %}
+!
+spanning-tree mode rapid-pvst
+spanning-tree portfast bpduguard default
+spanning-tree loopguard default
+!
+ip dhcp snooping vlan {{ vlans | map(attribute='id') | join(',') }}
+no ip dhcp snooping information option
+ip dhcp snooping
+!
+{% for block in access_ports %}
+{% for index in range(block.first, block.last + 1) %}
+interface {{ block.prefix }}{{ index }}
+ description {{ block.description }} ACCESS
+ switchport mode access
+ switchport access vlan {{ block.vlan }}
+ switchport nonegotiate
+ switchport port-security maximum 3
+ switchport port-security violation restrict
+ switchport port-security
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+ storm-control broadcast level 1.00
+ no shutdown
+!
+{% endfor %}
+{% endfor %}
+{% for uplink in uplinks %}
+interface {{ uplink.interface }}
+ description UPLINK TO {{ uplink.peer | upper }} {{ uplink.peer_interface }}
+ switchport mode trunk
+ switchport trunk allowed vlan {{ vlans | map(attribute='id') | join(',') }}
+ switchport nonegotiate
+ ip dhcp snooping trust
+ spanning-tree guard root
+ no shutdown
+!
+{% endfor %}
+interface Vlan{{ mgmt_vlan }}
+ description IN-BAND MANAGEMENT
+ ip address {{ mgmt_address }} 255.255.255.0
+ no shutdown
+!
+ip default-gateway {{ (vlans | selectattr('id', 'equalto', mgmt_vlan) | first).gateway }}
+no ip routing
+{% include '_footer.j2' %}

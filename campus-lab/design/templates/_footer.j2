@@ -1,0 +1,15 @@
+!
+banner login ^C
+Authorized access only. Activity is logged and reviewed.
+^C
+!
+line con 0
+ exec-timeout 10 0
+ logging synchronous
+line vty 0 4
+ access-class MGMT-ACCESS in
+ exec-timeout 10 0
+ transport input ssh
+ transport output none
+!
+end

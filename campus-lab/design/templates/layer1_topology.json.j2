@@ -1,0 +1,24 @@
+{#- The cable map and the device configs come from the same model, so a link
+    that exists in analysis always exists in the configuration. -#}
+{%- set edges = [] -%}
+{%- for host in groups['access'] -%}
+  {%- for uplink in hostvars[host].uplinks -%}
+    {%- set _ = edges.append({'node1': {'hostname': host, 'interfaceName': uplink.interface},
+                              'node2': {'hostname': uplink.peer, 'interfaceName': uplink.peer_interface}}) -%}
+  {%- endfor -%}
+{%- endfor -%}
+{%- for host in groups['distribution'] -%}
+  {%- for link in hostvars[host].routed_links -%}
+    {%- set _ = edges.append({'node1': {'hostname': host, 'interfaceName': link.interface},
+                              'node2': {'hostname': link.peer, 'interfaceName': link.peer_interface}}) -%}
+  {%- endfor -%}
+{%- endfor -%}
+{%- set peer = hostvars['dist01'].peer_link -%}
+{%- set _ = edges.append({'node1': {'hostname': 'dist01', 'interfaceName': peer.interface},
+                          'node2': {'hostname': peer.peer, 'interfaceName': peer.peer_interface}}) -%}
+{%- set both = [] -%}
+{%- for edge in edges -%}
+  {%- set _ = both.append(edge) -%}
+  {%- set _ = both.append({'node1': edge.node2, 'node2': edge.node1}) -%}
+{%- endfor -%}
+{{ {'edges': both} | to_nice_json }}

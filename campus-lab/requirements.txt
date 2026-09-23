@@ -1,0 +1,7 @@
+ansible-core>=2.16
+ansible-lint
+jinja2
+netaddr
+pybatfish
+pytest
+pyyaml

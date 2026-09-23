@@ -1,0 +1,23 @@
+---
+loopback: 10.255.0.1
+mgmt_address: 10.10.99.1
+routed_links:
+  - interface: TenGigabitEthernet0/0/0
+    peer: dist01
+    peer_interface: TenGigabitEthernet1/0/1
+    address: 10.255.1.0
+    prefix_length: 31
+  - interface: TenGigabitEthernet0/0/1
+    peer: dist02
+    peer_interface: TenGigabitEthernet1/0/1
+    address: 10.255.1.2
+    prefix_length: 31
+datacenter_link:
+  interface: GigabitEthernet0/0/2
+  address: 10.20.0.1
+  prefix_length: 24
+internet_link:
+  interface: GigabitEthernet0/0/3
+  address: 198.51.100.2
+  prefix_length: 30
+  next_hop: 198.51.100.1

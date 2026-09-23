@@ -17,7 +17,7 @@ interface {{ link.interface }}
 !
 {% endfor %}
 interface {{ datacenter_link.interface }}
- description DATA CENTRE
+ description DATA CENTER
  ip address {{ datacenter_link.address }} {{ ('0.0.0.0/' ~ datacenter_link.prefix_length) | ipaddr('netmask') }}
  ip ospf {{ ospf.process_id }} area {{ ospf.area }}
  no shutdown

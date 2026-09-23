@@ -1,0 +1,40 @@
+!
+! Generated from design/group_vars and design/host_vars by design/render.yml.
+! Do not edit a device config by hand: change the model and re-render.
+!
+version 17.9
+service timestamps debug datetime msec localtime show-timezone
+service timestamps log datetime msec localtime show-timezone
+service password-encryption
+no service pad
+!
+hostname {{ inventory_hostname }}
+!
+no ip domain lookup
+ip domain name {{ domain_name }}
+{% for server in name_servers %}
+ip name-server {{ server }}
+{% endfor %}
+!
+aaa new-model
+aaa authentication login default local
+aaa authorization exec default local
+!
+ip ssh version 2
+!
+{% for server in ntp_servers %}
+ntp server {{ server }}
+{% endfor %}
+!
+{% for server in syslog_servers %}
+logging host {{ server }}
+{% endfor %}
+logging trap informational
+logging origin-id hostname
+!
+ip access-list standard MGMT-ACCESS
+{% for host in jump_hosts %}
+ permit {{ host }}
+{% endfor %}
+ deny   any log
+!

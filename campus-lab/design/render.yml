@@ -1,0 +1,35 @@
+---
+- name: Prepare the build tree
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Ensure the output directories exist
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../build/{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - configs
+        - batfish
+
+- name: Render campus device configurations from the model
+  hosts: campus
+  gather_facts: false
+  connection: local
+  tasks:
+    - name: Write the device configuration
+      ansible.builtin.template:
+        src: "templates/{{ config_template }}"
+        dest: "{{ playbook_dir }}/../build/configs/{{ inventory_hostname }}.cfg"
+        mode: "0644"
+      delegate_to: localhost
+
+- name: Render the cable map the analysis is checked against
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Write the layer 1 topology
+      ansible.builtin.template:
+        src: templates/layer1_topology.json.j2
+        dest: "{{ playbook_dir }}/../build/batfish/layer1_topology.json"
+        mode: "0644"

@@ -1,0 +1,28 @@
+---
+mgmt_address: 10.10.99.11
+stack_priority: 15
+uplinks:
+  - interface: GigabitEthernet1/0/49
+    peer: dist01
+    peer_interface: GigabitEthernet1/0/1
+  - interface: GigabitEthernet1/0/50
+    peer: dist02
+    peer_interface: GigabitEthernet1/0/1
+# Port blocks are expanded into one stanza per interface at render time, so
+# the generated config is what the switch will actually hold.
+access_ports:
+  - prefix: GigabitEthernet1/0/
+    first: 1
+    last: 10
+    vlan: 10
+    description: WORKSTATION
+  - prefix: GigabitEthernet1/0/
+    first: 11
+    last: 16
+    vlan: 20
+    description: BIOMED
+  - prefix: GigabitEthernet1/0/
+    first: 17
+    last: 20
+    vlan: 30
+    description: GUEST

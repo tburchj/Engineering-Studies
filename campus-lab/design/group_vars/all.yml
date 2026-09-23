@@ -1,0 +1,62 @@
+---
+# Campus data model. Everything a device config contains is derived from this
+# file plus the per-host facts; nothing is hand-typed into a config.
+
+domain_name: campus.lab
+ntp_servers:
+  - 10.20.0.10
+  - 10.20.0.11
+syslog_servers:
+  - 10.20.0.20
+name_servers:
+  - 10.20.0.10
+
+mgmt_vlan: 99
+jump_hosts:
+  - 10.10.99.10
+
+# Every VLAN that exists in the campus. Access ports and trunk allowed-lists
+# are both generated from this, so the two can never drift apart.
+vlans:
+  - id: 10
+    name: WORKSTATION
+    subnet: 10.10.10.0/24
+    gateway: 10.10.10.1
+    prefix_length: 24
+    hsrp_group: 10
+    primary: dist01
+  - id: 20
+    name: BIOMED
+    subnet: 10.10.20.0/24
+    gateway: 10.10.20.1
+    prefix_length: 24
+    hsrp_group: 20
+    primary: dist02
+  - id: 30
+    name: GUEST
+    subnet: 10.10.30.0/24
+    gateway: 10.10.30.1
+    prefix_length: 24
+    hsrp_group: 30
+    primary: dist02
+  - id: 99
+    name: MGMT
+    subnet: 10.10.99.0/24
+    gateway: 10.10.99.1
+    prefix_length: 24
+    hsrp_group: 99
+    primary: dist01
+
+# Prefixes that count as "inside" for the guest containment ACL.
+internal_prefixes:
+  - 10.10.0.0/16
+  - 10.20.0.0/16
+  - 10.255.0.0/16
+
+datacenter_prefix: 10.20.0.0/24
+
+ospf:
+  process_id: 1
+  area: 0
+  reference_bandwidth: 100000
+  auth_key_id: 1

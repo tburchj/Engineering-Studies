@@ -1,0 +1,144 @@
+{
+    "edges": [
+        {
+            "node1": {
+                "hostname": "acc01",
+                "interfaceName": "GigabitEthernet1/0/49"
+            },
+            "node2": {
+                "hostname": "dist01",
+                "interfaceName": "GigabitEthernet1/0/1"
+            }
+        },
+        {
+            "node1": {
+                "hostname": "dist01",
+                "interfaceName": "GigabitEthernet1/0/1"
+            },
+            "node2": {
+                "hostname": "acc01",
+                "interfaceName": "GigabitEthernet1/0/49"
+            }
+        },
+        {
+            "node1": {
+                "hostname": "acc01",
+                "interfaceName": "GigabitEthernet1/0/50"
+            },
+            "node2": {
+                "hostname": "dist02",
+                "interfaceName": "GigabitEthernet1/0/1"
+            }
+        },
+        {
+            "node1": {
+                "hostname": "dist02",
+                "interfaceName": "GigabitEthernet1/0/1"
+            },
+            "node2": {
+                "hostname": "acc01",
+                "interfaceName": "GigabitEthernet1/0/50"
+            }
+        },
+        {
+            "node1": {
+                "hostname": "acc02",
+                "interfaceName": "GigabitEthernet1/0/49"
+            },
+            "node2": {
+                "hostname": "dist01",
+                "interfaceName": "GigabitEthernet1/0/2"
+            }
+        },
+        {
+            "node1": {
+                "hostname": "dist01",
+                "interfaceName": "GigabitEthernet1/0/2"
+            },
+            "node2": {
+                "hostname": "acc02",
+                "interfaceName": "GigabitEthernet1/0/49"
+            }
+        },
+        {
+            "node1": {
+                "hostname": "acc02",
+                "interfaceName": "GigabitEthernet1/0/50"
+            },
+            "node2": {
+                "hostname": "dist02",
+                "interfaceName": "GigabitEthernet1/0/2"
+            }
+        },
+        {
+            "node1": {
+                "hostname": "dist02",
+                "interfaceName": "GigabitEthernet1/0/2"
+            },
+            "node2": {
+                "hostname": "acc02",
+                "interfaceName": "GigabitEthernet1/0/50"
+            }
+        },
+        {
+            "node1": {
+                "hostname": "dist01",
+                "interfaceName": "TenGigabitEthernet1/0/1"
+            },
+            "node2": {
+                "hostname": "core01",
+                "interfaceName": "TenGigabitEthernet0/0/0"
+            }
+        },
+        {
+            "node1": {
+                "hostname": "core01",
+                "interfaceName": "TenGigabitEthernet0/0/0"
+            },
+            "node2": {
+                "hostname": "dist01",
+                "interfaceName": "TenGigabitEthernet1/0/1"
+            }
+        },
+        {
+            "node1": {
+                "hostname": "dist02",
+                "interfaceName": "TenGigabitEthernet1/0/1"
+            },
+            "node2": {
+                "hostname": "core01",
+                "interfaceName": "TenGigabitEthernet0/0/1"
+            }
+        },
+        {
+            "node1": {
+                "hostname": "core01",
+                "interfaceName": "TenGigabitEthernet0/0/1"
+            },
+            "node2": {
+                "hostname": "dist02",
+                "interfaceName": "TenGigabitEthernet1/0/1"
+            }
+        },
+        {
+            "node1": {
+                "hostname": "dist01",
+                "interfaceName": "TenGigabitEthernet1/0/2"
+            },
+            "node2": {
+                "hostname": "dist02",
+                "interfaceName": "TenGigabitEthernet1/0/2"
+            }
+        },
+        {
+            "node1": {
+                "hostname": "dist02",
+                "interfaceName": "TenGigabitEthernet1/0/2"
+            },
+            "node2": {
+                "hostname": "dist01",
+                "interfaceName": "TenGigabitEthernet1/0/2"
+            }
+        }
+    ]
+}

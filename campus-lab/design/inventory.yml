@@ -1,0 +1,25 @@
+---
+all:
+  children:
+    campus:
+      children:
+        access:
+          hosts:
+            acc01:
+            acc02:
+          vars:
+            platform: c9300
+            config_template: access.cfg.j2
+        distribution:
+          hosts:
+            dist01:
+            dist02:
+          vars:
+            platform: c9500
+            config_template: distribution.cfg.j2
+        core:
+          hosts:
+            core01:
+          vars:
+            platform: c8300
+            config_template: core.cfg.j2

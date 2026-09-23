@@ -1,0 +1,41 @@
+{% include '_common.j2' %}
+
+ip routing
+!
+interface Loopback0
+ description ROUTER ID
+ ip address {{ loopback }} 255.255.255.255
+ ip ospf {{ ospf.process_id }} area {{ ospf.area }}
+!
+{% for link in routed_links %}
+interface {{ link.interface }}
+ description L3 LINK TO {{ link.peer | upper }} {{ link.peer_interface }}
+ ip address {{ link.address }} {{ ('0.0.0.0/' ~ link.prefix_length) | ipaddr('netmask') }}
+ ip ospf {{ ospf.process_id }} area {{ ospf.area }}
+ ip ospf network point-to-point
+ no shutdown
+!
+{% endfor %}
+interface {{ datacenter_link.interface }}
+ description DATA CENTRE
+ ip address {{ datacenter_link.address }} {{ ('0.0.0.0/' ~ datacenter_link.prefix_length) | ipaddr('netmask') }}
+ ip ospf {{ ospf.process_id }} area {{ ospf.area }}
+ no shutdown
+!
+interface {{ internet_link.interface }}
+ description INTERNET EDGE
+ ip address {{ internet_link.address }} {{ ('0.0.0.0/' ~ internet_link.prefix_length) | ipaddr('netmask') }}
+ no shutdown
+!
+router ospf {{ ospf.process_id }}
+ router-id {{ loopback }}
+ auto-cost reference-bandwidth {{ ospf.reference_bandwidth }}
+ passive-interface default
+{% for link in routed_links %}
+ no passive-interface {{ link.interface }}
+{% endfor %}
+ default-information originate always
+!
+ip route 0.0.0.0 0.0.0.0 {{ internet_link.next_hop }}
+!
+{% include '_footer.j2' %}

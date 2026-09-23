@@ -9,12 +9,12 @@ questions about it.
 The point is the last part. Anyone can write a VLAN and an ACL. The interesting question
 is how you know, before the change window, that the guest VLAN still cannot reach a
 biomedical device, that both distribution switches enforce that identically, and that the
-trunk you just edited still carries every VLAN on both ends. Here that is 61 tests that
+trunk you just edited still carries every VLAN on both ends. Here that is 62 tests that
 run in seven seconds:
 
 ```
 $ pytest verify -q
-61 passed in 7.06s
+62 passed in 6.89s
 ```
 
 **[Click through it in a browser](https://tburchj.github.io/Engineering-Studies/)** — the

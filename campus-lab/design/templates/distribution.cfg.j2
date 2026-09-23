@@ -23,8 +23,12 @@ spanning-tree vlan {{ vlan_id }} priority 8192
 ! moment it is added to the model.
 ip access-list extended GUEST-IN
 {{ acl.dhcp_permit('10.10.30.0', '0.0.0.255') }}
+! TCP as well as UDP: a truncated answer is retried over TCP, and a resolver the
+! guest can reach only for small answers is worse to diagnose than one it cannot
+! reach at all.
 {% for server in name_servers %}
  permit udp 10.10.30.0 0.0.0.255 host {{ server }} eq domain
+ permit tcp 10.10.30.0 0.0.0.255 host {{ server }} eq domain
 {% endfor %}
 {% for prefix in internal_prefixes %}
  deny   ip 10.10.30.0 0.0.0.255 {{ prefix | ipaddr('network') }} {{ prefix | ipaddr('hostmask') }} log

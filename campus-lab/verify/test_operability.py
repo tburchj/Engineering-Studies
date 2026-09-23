@@ -63,14 +63,16 @@ def test_a_client_can_renew_its_lease(bf, node, filter_name, client) -> None:
     )
 
 
-def test_guest_can_resolve_names(bf) -> None:
-    """Guest DNS has to reach the resolvers, not the gateway address."""
+@pytest.mark.parametrize("protocol", ["udp", "tcp"])
+def test_guest_can_resolve_names(bf, protocol) -> None:
+    """Guest DNS has to reach the resolvers, not the gateway address — over TCP too,
+    because a truncated answer is retried there and the internal-prefix deny eats it."""
     headers = HeaderConstraints(
-        srcIps="10.10.30.50", dstIps="10.20.0.10", ipProtocols=["udp"], dstPorts="53"
+        srcIps="10.10.30.50", dstIps="10.20.0.10", ipProtocols=[protocol], dstPorts="53"
     )
     for node in ("dist01", "dist02"):
         assert permitted(bf, node, "GUEST-IN", headers), (
-            f"GUEST-IN on {node} denies DNS to the configured resolver"
+            f"GUEST-IN on {node} denies {protocol.upper()} DNS to the configured resolver"
         )
 
 

@@ -53,9 +53,14 @@
   th { color: var(--muted); font-weight: 600; background: var(--panel); font-size: 12px; }
   td.cell { cursor: pointer; text-align: center; font-weight: 600; letter-spacing: .02em; }
   td.cell:hover { outline: 2px solid var(--accent); outline-offset: -2px; }
-  td.allow { color: var(--ok); }
-  td.deny { color: var(--deny); }
-  td.mismatch { background: #3a1d1d; }
+  td.cell .mark { color: var(--ok); margin-right: 5px; }
+  td.allow { color: var(--text); }
+  td.deny { color: var(--muted); }
+  td.mismatch { background: #3a1d1d; color: var(--deny); }
+  td.mismatch .mark { color: var(--deny); }
+  .matrix-legend { display: flex; gap: 18px; flex-wrap: wrap; color: var(--muted); font-size: 12.5px;
+            margin: 8px 0 4px; }
+  .matrix-legend .mark { color: var(--ok); }
   .tag { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 11px;
          border: 1px solid var(--line); color: var(--muted); }
   pre { background: #0b0e12; border: 1px solid var(--line); border-radius: 6px; padding: 12px;
@@ -78,25 +83,40 @@
 </head>
 <body>
 <header>
-  <h1>Campus lab — a three-tier design that has to prove itself before it ships</h1>
-  <p>Every switch, link and policy cell below is read from the same model the configurations are
-  generated from, and every allow/deny is the answer <a href="https://batfish.org">Batfish</a>
-  returned when it was asked about the generated configuration — not a diagram anyone drew by
-  hand. Click a device for its config; click a policy cell for the trace behind it.
-  <a href="https://github.com/tburchj/Engineering-Studies">Source</a>.</p>
+  <h1>A campus network that proves it does what it is supposed to — before anyone touches a switch</h1>
+  <p>This is a small hospital-style network: five devices, four kinds of users, and a set of
+  rules about who may talk to whom. The device settings were written by a program from one
+  description of the design, and an analysis tool (<a href="https://batfish.org">Batfish</a>)
+  read those settings back and checked every rule. Nothing on this page was drawn by hand —
+  it is what the checks found. <b>Click a device</b> to see its settings, or <b>click a cell in
+  the table</b> to see why traffic got through or was stopped.
+  <a href="https://github.com/tburchj/Engineering-Studies">Source code</a>.</p>
 </header>
 
 <div class="wrap">
   <div class="left">
-    <h2>Topology</h2>
+    <h2>The network</h2>
+    <p class="hint">Computers plug into the two <b>access</b> switches at the bottom. The two
+    <b>distribution</b> switches in the middle are where the rules live and where traffic is
+    routed between groups — there are two so that one can fail. The <b>core</b> router at the top
+    is the way out to the data centre and the internet.</p>
     <svg id="topo" viewBox="0 0 800 470" role="img" aria-label="Campus topology"></svg>
     <div class="legend">
-      <span class="trunk">802.1Q trunk</span>
-      <span class="routed">routed /31, OSPF area 0</span>
+      <span class="trunk">carries several user groups on one cable (802.1Q trunk)</span>
+      <span class="routed">router-to-router link (routed /31, OSPF)</span>
     </div>
 
-    <h2>Segmentation policy, as verified</h2>
+    <h2>Who is allowed to talk to whom</h2>
+    <p class="hint">Read a row left to right: <em>this kind of device</em> tried to reach
+    <em>that destination</em>. A tick means the network did what the rules say — whether the
+    rule was “let it through” or “keep it out”. In a hospital most rules are “keep it out”,
+    so most cells should say <b>isolated</b>; that is the network working, not failing.</p>
     <div id="matrix"></div>
+    <div class="matrix-legend">
+      <span><span class="mark">✓</span> checked — does what the rule says</span>
+      <span><b>reaches</b> — meant to get through, and does</span>
+      <span><b>isolated</b> — meant to be kept out, and is</span>
+    </div>
     <p class="hint" id="matrix-note"></p>
   </div>
 
@@ -106,10 +126,11 @@
 </div>
 
 <footer>
-  These are Cisco IOS-XE configurations for Catalyst 9300/9500/8300 platforms, analysed
-  formally by Batfish. They have not been applied to physical Catalyst hardware, and this is
-  not a production network. Implementation was AI-assisted; the design, the failure modes it
-  guards against and the verification criteria are mine.
+  <b>What this is, honestly.</b> A lab design, not a live hospital network. The settings are
+  written in the language of real Cisco Catalyst 9300/9500/8300 switches and routers and were
+  checked by formal analysis of those settings, not by running them on physical hardware.
+  I used AI tooling to help write the code; the design, the things it guards against and the
+  decision of what to check are mine, and I can explain any line of it.
   &nbsp;—&nbsp; Timothy Burch,
   <a href="https://github.com/tburchj">github.com/tburchj</a>
   <div id="provenance" class="provenance"></div>
@@ -133,7 +154,7 @@ function showProvenance() {
   const repo = "https://github.com/tburchj/Engineering-Studies";
   const short = s => s.slice(0, 12);
   document.getElementById("provenance").innerHTML =
-    `<b>Provenance.</b> Every number on this page was produced by the CI run that verified this exact design. ` +
+    `<b>Where this page came from.</b> It was generated by the same automated run that checked the design, so it cannot show a result the checks did not produce. ` +
     `<a href="${repo}/commit/${p.commit}">commit ${short(p.commit)}</a> &middot; ` +
     `design digest <b title="SHA-256 of the normalised model (group_vars + host_vars)">${short(p.design_sha256)}</b> &middot; ` +
     `build digest <b title="SHA-256 of the five generated configurations">${short(p.build_sha256)}</b> &middot; ` +
@@ -200,14 +221,23 @@ function selectDevice(name) {
     <p class="hint">HSRP active and spanning-tree root are the same switch for each VLAN, so
     steady-state traffic never crosses the peer link to reach its own gateway.</p>` : "";
 
+  const ROLE_PLAIN = {
+    access: "An access switch: the ports that computers, phones and medical devices plug into. "
+      + "It keeps each kind of device in its own group and hands everything up to the distribution pair.",
+    distribution: "A distribution switch: the gateway for every user group and the place where "
+      + "the who-can-talk-to-whom rules are enforced. Its twin holds the same rules so either can take over.",
+    core: "The core router: the way out of the campus to the data centre and the internet.",
+  };
   document.getElementById("detail").innerHTML = `
     <h2>${d.name} — ${d.platform}</h2>
+    <p class="hint">${ROLE_PLAIN[d.role]}</p>
     <div>${d.mgmt ? `<span class="pill">mgmt <b>${d.mgmt}</b></span>` : ""}
          ${d.loopback ? `<span class="pill">loopback <b>${d.loopback}</b></span>` : ""}</div>
     <h2>Links</h2><div>${links}</div>
     ${roles}
-    <h2>Generated configuration</h2>
-    <p class="hint">Rendered from the model — nothing here was typed by hand.</p>
+    <h2>Its settings, as generated</h2>
+    <p class="hint">This is what would be loaded onto the device. It was produced from the design by
+    a program — nothing here was typed by hand.</p>
     <pre>${escapeHtml(d.config)}</pre>`;
 }
 
@@ -225,8 +255,11 @@ function drawMatrix() {
       const delivered = cell.delivered.dist01 && cell.delivered.dist02;
       const cls = delivered ? "allow" : "deny";
       const bad = cell.matches_intent ? "" : " mismatch";
-      html += `<td class="cell ${cls}${bad}" data-r="${ri}" data-c="${ci}">
-        ${delivered ? "allowed" : "blocked"}</td>`;
+      const mark = cell.matches_intent ? "✓" : "✗";
+      html += `<td class="cell ${cls}${bad}" data-r="${ri}" data-c="${ci}"
+        title="${cell.matches_intent ? "Verified: " : "DOES NOT MATCH INTENT: "}${
+          delivered ? "traffic reaches this destination" : "traffic is isolated from this destination"
+        } — click for the trace"><span class="mark">${mark}</span>${delivered ? "reaches" : "isolated"}</td>`;
     });
     html += `</tr>`;
   });
@@ -239,22 +272,34 @@ function drawMatrix() {
   const judged = DATA.policy.flatMap(r => r.cells).filter(c => !c.same_segment);
   const mismatches = judged.filter(c => !c.matches_intent).length;
   document.getElementById("matrix-note").textContent = mismatches === 0
-    ? `All ${judged.length} cells match the written intent, at both distribution switches. `
-      + "Same-segment flows are marked — because they never reach the SVI the policy sits on."
-    : `${mismatches} cell(s) do not match the written intent — highlighted in red.`;
+    ? `${judged.length} of ${judged.length} rules checked and correct, on both distribution switches. `
+      + "A dash means a device talking to its own group — that traffic never passes the switch "
+      + "where the rule sits, so there is nothing to check."
+    : `${mismatches} rule(s) are NOT doing what the policy says — marked ✗ in red.`;
 }
 
 function showCell(ri, ci) {
   const row = DATA.policy[ri], cell = row.cells[ci];
   const trace = gw => `<h2>${gw}</h2><pre>${cell.traces[gw].join("\n")}\n\n→ ${
     cell.dispositions[gw].join(", ")}</pre>`;
+  const got = cell.delivered.dist01 && cell.delivered.dist02;
+  const plain = cell.expected
+    ? `The rules say a ${row.source.toLowerCase()} <b>should</b> be able to reach ${cell.destination.toLowerCase()}. `
+      + (got ? "It can, through either distribution switch." : "<b>It cannot — this rule is broken.</b>")
+    : `The rules say a ${row.source.toLowerCase()} <b>must not</b> reach ${cell.destination.toLowerCase()}. `
+      + (got ? "<b>It can — this rule is broken.</b>" : "Both distribution switches stop it.");
   document.getElementById("detail").innerHTML = `
     <h2>${row.source} → ${cell.destination}</h2>
-    <div><span class="pill">src <b>${row.src_ip}</b> (VLAN ${row.vlan})</span>
-         <span class="pill">dst <b>${cell.dst}:${cell.port}</b> TCP</span>
-         <span class="pill">intent <b>${cell.expected ? "allow" : "block"}</b></span></div>
-    <p class="hint">Traced at both distribution switches, because a policy enforced only on the
-    HSRP active gateway stops being enforced the moment it fails over.</p>
+    <p>${plain}</p>
+    <p class="hint">It is checked on both switches because a rule that only exists on the one
+    currently in charge disappears the moment that switch fails and the other takes over.</p>
+    <div><span class="pill">from <b>${row.src_ip}</b> (VLAN ${row.vlan})</span>
+         <span class="pill">to <b>${cell.dst}:${cell.port}</b> TCP</span>
+         <span class="pill">rule <b>${cell.expected ? "reach" : "isolate"}</b></span>
+         <span class="pill">found <b>${got ? "reaches" : "isolated"}</b></span></div>
+    <h2>The proof, step by step</h2>
+    <p class="hint">The path the analysis followed through each switch, and the exact rule line
+    that let the traffic through or stopped it.</p>
     ${trace("dist01")}${trace("dist02")}`;
 }
 
@@ -262,15 +307,31 @@ function showIntro() {
   const total = DATA.policy.flatMap(r => r.cells).filter(c => !c.same_segment).length * 2;
   document.getElementById("detail").innerHTML = `
     <h2>Start here</h2>
-    <p class="hint">Click any device in the topology to read the configuration that was generated
-    for it, or any cell in the policy matrix to see the packet trace that proves it.</p>
+    <p class="hint">Click any device on the left to read the settings that were generated for it,
+    or any cell in the table to see why that traffic got through or was stopped.</p>
+    <h2>The idea in one paragraph</h2>
+    <p class="hint">Network outages usually come from a change that looked fine and was not.
+    Here the whole design is written down once as data, the device settings are produced from
+    it by a program (so no one mistypes a setting on one switch), and ${DATA.provenance ? DATA.provenance.tests : "dozens of"}
+    automatic checks read those settings back and prove the network still does what it is
+    meant to — every time anything changes, before it could reach a real switch.</p>
     <h2>What is being claimed</h2>
-    <p class="hint">Four VLANs across two access switches, a redundant distribution pair and a
-    core router. Rapid-PVST with root placement pinned to the HSRP active gateway per VLAN.
+    <p class="hint">Four groups of users (staff workstations, medical devices, guest wifi and
+    the switches' own management), two access switches, a pair of distribution switches that
+    back each other up, and a core router. The rules for who can talk to whom are enforced on
+    <em>both</em> distribution switches, so they still hold if one fails.</p>
+    <details><summary class="hint" style="cursor:pointer">Technical detail</summary>
+    <p class="hint">Rapid-PVST with root placement pinned to the HSRP active gateway per VLAN.
     OSPF area 0 over routed /31 uplinks, with the distribution peer link routed rather than
     trunked, so losing it is a routing event instead of a spanning-tree event. Inbound ACLs on
-    every user SVI, on <em>both</em> distribution switches.</p>
+    every user SVI, on both distribution switches.</p></details>
     <h2>How it is checked</h2>
+    <p class="hint">Every rule in the table is tested from both switches. On top of that, the
+    checks make sure the switches agree with each other, that the basics still work (a new
+    laptop can still get an address, an engineer can still log in), that a change can never lock
+    out the people who would have to undo it, that every device keeps a record of what was
+    changed, and that nothing resembling a real password is in the code.</p>
+    <details><summary class="hint" style="cursor:pointer">Technical detail</summary>
     <p class="hint">${total} traces behind the matrix above, plus trunk allowed-VLAN agreement,
     OSPF adjacency, HSRP consistency, undefined and unapplied ACLs, and the operability cases a
     security control tends to break — DHCP from a client that has no address yet, and a local
@@ -278,7 +339,7 @@ function showIntro() {
     every device's management address through both gateways, so a change cannot cut the path
     its own rollback needs; every device archives a rollback point and logs each configured
     line; and the committed build is scanned for anything shaped like a real credential.
-    It runs in CI on every commit, and the footer carries the digests of what it verified.</p>`;
+    It runs in CI on every commit, and the footer carries the digests of what it verified.</p></details>`;
 }
 
 function escapeHtml(s) {

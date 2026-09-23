@@ -15,6 +15,16 @@ mgmt_vlan: 99
 jump_hosts:
   - 10.10.99.10
 
+# Local fallback login. The hash is a lab placeholder, not a credential: a real
+# deployment renders it from the credential store.
+local_admin:
+  username: netadmin
+  secret_hash: PLACEHOLDER.RENDERED.FROM.CREDENTIAL.STORE
+
+# Relay target for every user VLAN. Also the address the client ACLs have to
+# permit, or a renewing client is denied by its own segmentation policy.
+dhcp_server: 10.20.0.10
+
 # Every VLAN that exists in the campus. Access ports and trunk allowed-lists
 # are both generated from this, so the two can never drift apart.
 vlans:

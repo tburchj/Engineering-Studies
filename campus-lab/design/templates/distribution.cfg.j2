@@ -1,3 +1,4 @@
+{% import '_macros.j2' as acl with context %}
 {% include '_common.j2' %}
 
 ip routing
@@ -21,8 +22,10 @@ spanning-tree vlan {{ vlan_id }} priority 8192
 ! lines come from internal_prefixes, so a new campus range is covered the
 ! moment it is added to the model.
 ip access-list extended GUEST-IN
- permit udp 10.10.30.0 0.0.0.255 host {{ (vlans | selectattr('id', 'equalto', 30) | first).gateway }} eq domain
- permit udp 10.10.30.0 0.0.0.255 host {{ (vlans | selectattr('id', 'equalto', 30) | first).gateway }} eq bootps
+{{ acl.dhcp_permit('10.10.30.0', '0.0.0.255') }}
+{% for server in name_servers %}
+ permit udp 10.10.30.0 0.0.0.255 host {{ server }} eq domain
+{% endfor %}
 {% for prefix in internal_prefixes %}
  deny   ip 10.10.30.0 0.0.0.255 {{ prefix | ipaddr('network') }} {{ prefix | ipaddr('hostmask') }} log
 {% endfor %}
@@ -32,6 +35,7 @@ ip access-list extended GUEST-IN
 ! Biomed devices talk to their management servers in the data centre and to
 ! nothing else. This is the segment an auditor asks about first.
 ip access-list extended BIOMED-IN
+{{ acl.dhcp_permit('10.10.20.0', '0.0.0.255') }}
  permit udp 10.10.20.0 0.0.0.255 host {{ ntp_servers[0] }} eq ntp
  permit tcp 10.10.20.0 0.0.0.255 {{ datacenter_prefix | ipaddr('network') }} {{ datacenter_prefix | ipaddr('hostmask') }} eq 443
  permit tcp 10.10.20.0 0.0.0.255 {{ datacenter_prefix | ipaddr('network') }} {{ datacenter_prefix | ipaddr('hostmask') }} eq 22
@@ -43,18 +47,22 @@ ip access-list extended BIOMED-IN
 ! Workstations reach the data centre and the internet, but the management
 ! network is reachable only from the jump host.
 ip access-list extended WORKSTATION-IN
+{{ acl.dhcp_permit('10.10.10.0', '0.0.0.255') }}
  deny   ip 10.10.10.0 0.0.0.255 {{ (vlans | selectattr('id', 'equalto', mgmt_vlan) | first).subnet | ipaddr('network') }} {{ (vlans | selectattr('id', 'equalto', mgmt_vlan) | first).subnet | ipaddr('hostmask') }} log
  deny   ip 10.10.10.0 0.0.0.255 10.10.20.0 0.0.0.255 log
  permit ip 10.10.10.0 0.0.0.255 any
  deny   ip any any log
 !
+! No root guard on these trunks. The peer link is routed, so the only Layer 2
+! path between the two distribution switches runs through the access layer:
+! the secondary learns the root's superior BPDUs on exactly these ports, and
+! root guard here would block the path it is meant to protect.
 {% for downlink in downlinks %}
 interface {{ downlink.interface }}
  description TRUNK TO {{ downlink.peer | upper }} {{ downlink.peer_interface }}
  switchport mode trunk
  switchport trunk allowed vlan {{ vlans | map(attribute='id') | join(',') }}
  switchport nonegotiate
- spanning-tree guard root
  no shutdown
 !
 {% endfor %}
@@ -86,7 +94,7 @@ interface Vlan{{ vlan.id }}
  description {{ vlan.name }} GATEWAY
  ip address {{ svi_addresses[vlan.id] }} {{ ('0.0.0.0/' ~ vlan.prefix_length) | ipaddr('netmask') }}
 {% if vlan.id != mgmt_vlan %}
- ip helper-address {{ name_servers[0] }}
+ ip helper-address {{ dhcp_server }}
 {% endif %}
 {% if vlan.name == 'GUEST' %}
  ip access-group GUEST-IN in

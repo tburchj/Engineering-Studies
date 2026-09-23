@@ -9,13 +9,19 @@ questions about it.
 The point is the last part. Anyone can write a VLAN and an ACL. The interesting question
 is how you know, before the change window, that the guest VLAN still cannot reach a
 biomedical device, that both distribution switches enforce that identically, and that the
-trunk you just edited still carries every VLAN on both ends. Here that is 38 tests that
-run in five seconds:
+trunk you just edited still carries every VLAN on both ends. Here that is 61 tests that
+run in seven seconds:
 
 ```
 $ pytest verify -q
-38 passed in 5.38s
+61 passed in 7.06s
 ```
+
+**[Click through it in a browser](https://tburchj.github.io/Engineering-Studies/)** — the
+topology, every generated configuration, and the segmentation matrix with the Batfish
+trace behind each allow and deny. The page is built by the same CI run that verifies the
+design, from the analysed snapshot, so it cannot show a result the analysis did not
+produce.
 
 ## The design
 

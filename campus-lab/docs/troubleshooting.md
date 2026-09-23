@@ -63,9 +63,17 @@ The two failures worth naming:
   `test_trunk_allowed_vlans_match_on_both_ends`.
 - **An unexpected STP root.** `show spanning-tree vlan 10` should show dist01 as root for
   VLAN 10 with priority 4096. If a cheap switch under a desk has become root, every user
-  VLAN is now taking a path nobody designed. Root guard on the distribution trunks is what
-  prevents it; loop guard is what prevents a unidirectional link from creating a loop when
-  BPDUs stop arriving.
+  VLAN is now taking a path nobody designed. BPDU guard on every access port is what
+  prevents it here; loop guard is what prevents a unidirectional link from creating a loop
+  when BPDUs stop arriving.
+
+  Note what is deliberately *not* configured: root guard on the switch-to-switch trunks.
+  The distribution peer link is routed, so the only Layer 2 path between dist01 and dist02
+  runs through the access layer — the secondary switch learns the root's superior BPDUs on
+  exactly those trunks, and root guard there would put them in root-inconsistent state and
+  break the topology it was meant to protect. This is the kind of control that looks
+  correct in a config review and takes the network down at 2 a.m.;
+  `test_root_guard_is_not_applied_to_campus_trunks` is there so it cannot come back.
 
 Because STP root and HSRP active are deliberately the same switch per VLAN, a root change
 also means the gateway path now crosses the peer link. The symptom is "everything still
@@ -103,6 +111,14 @@ show logging | include denied
 If a deny line's counter is climbing at the moment the user reproduces the problem, you
 are done. If nothing increments, the traffic is not reaching this device and you are back
 at Layer 2.
+
+The classic version of this on a segmented network is **a whole VLAN with no addresses**.
+An inbound SVI ACL is evaluated before DHCP relay, and a client with no lease sources its
+DISCOVER from 0.0.0.0 to 255.255.255.255 — a source and destination no per-subnet permit
+line matches. The segment then fails closed against its own DHCP, with snooping, the
+helper address and the server all perfectly healthy. Renewals fail the same way later,
+unicast to the server, dropped by the internal-prefix deny. Both flows are checked in
+`verify/test_operability.py` so the policy cannot quietly strangle the segment it protects.
 
 The same question answered from the configuration, without waiting for a user:
 

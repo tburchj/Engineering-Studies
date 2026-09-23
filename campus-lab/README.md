@@ -3,7 +3,7 @@
 A three-tier campus network — two access switches, a redundant distribution pair, and a
 core router — described once as data, rendered into Cisco IOS-XE style configurations by
 Ansible, and then checked by [Batfish](https://batfish.org), which builds a model of the
-forwarding and filtering behaviour from the configurations themselves and answers
+forwarding and filtering behavior from the configurations themselves and answers
 questions about it.
 
 The point is the last part. Anyone can write a VLAN and an ACL. The interesting question
@@ -20,7 +20,7 @@ $ pytest verify -q
 **[Click through it in a browser](https://tburchj.github.io/Engineering-Studies/)** — the
 topology, every generated configuration, and the segmentation matrix with the Batfish
 trace behind each allow and deny. The page is built by the same CI run that verifies the
-design, from the analysed snapshot, so it cannot show a result the analysis did not
+design, from the analyzed snapshot, so it cannot show a result the analysis did not
 produce.
 
 ## The design
@@ -125,7 +125,7 @@ just a configuration that has to be correct:
   a rollback point (`configure replace`) and a per-line syslog record of what was entered,
   with keys hidden. Failed and successful logins are logged and brute force is throttled.
 - **The published page carries its provenance.** `site/export.py` writes a SHA-256 of the
-  normalised model (`design_sha256`), a SHA-256 of the five generated configurations
+  normalized model (`design_sha256`), a SHA-256 of the five generated configurations
   (`build_sha256`), the commit, the test count and the time of the CI run into
   `data.json`, and the page prints them. An approval recorded against the design digest
   is an approval of exactly those values; change one VLAN and the digest changes.
@@ -140,11 +140,11 @@ on real hardware — is in [`docs/troubleshooting.md`](docs/troubleshooting.md).
 ## What this is and is not
 
 - The configurations are **Cisco IOS-XE syntax for Catalyst 9300/9500/8300 platforms**,
-  and they are parsed and modelled as IOS-XE by Batfish.
+  and they are parsed and modeled as IOS-XE by Batfish.
 - They have **not been applied to physical Catalyst hardware**. Cisco does not publish
-  freely runnable C9000/C8000 images, so behaviour here is proven by formal analysis of
+  freely runnable C9000/C8000 images, so behavior here is proven by formal analysis of
   the configurations rather than by packets on a real switch. Batfish models routing,
-  forwarding and ACL behaviour; it does not model control-plane timing, STP convergence,
+  forwarding and ACL behavior; it does not model control-plane timing, STP convergence,
   or hardware TCAM limits.
 - Addressing, VLAN names and the segmentation policy are invented for the lab. There is
   no customer data here of any kind.

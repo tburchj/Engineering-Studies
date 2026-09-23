@@ -1,4 +1,4 @@
-"""The configs have to be coherent before any behavioural claim about them means anything."""
+"""The configs have to be coherent before any behavioral claim about them means anything."""
 
 from __future__ import annotations
 
@@ -6,14 +6,14 @@ from __future__ import annotations
 # Lines Batfish's IOS grammar does not model. They are kept in the configs because
 # the switch needs them; they are listed here so an unexpected one fails the build
 # instead of quietly reducing what the analysis actually covers.
-KNOWN_UNMODELLED = ("ip default-gateway",)
+KNOWN_UNMODELED = ("ip default-gateway",)
 
 
 def test_every_config_parses_without_error(bf) -> None:
     issues = bf.q.initIssues().answer().frame()
     parsing = issues[issues["Type"].isin(["Parse error", "Parse warning"])]
     unexpected = parsing[
-        ~parsing["Line_Text"].str.strip().str.startswith(KNOWN_UNMODELLED)
+        ~parsing["Line_Text"].str.strip().str.startswith(KNOWN_UNMODELED)
     ]
     assert unexpected.empty, f"snapshot did not parse cleanly:\n{unexpected}"
 

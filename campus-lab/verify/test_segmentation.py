@@ -47,7 +47,7 @@ def dispositions(bf, source, dst: str, port: str, gateway: str) -> set[str]:
 @pytest.mark.parametrize(
     ("source", "dst", "port", "why"),
     [
-        (WORKSTATION, DC_SERVER, "443", "workstations must reach the data centre"),
+        (WORKSTATION, DC_SERVER, "443", "workstations must reach the data center"),
         (WORKSTATION, INTERNET, "443", "workstations must reach the internet"),
         (BIOMED, DC_SERVER, "443", "biomed devices must reach their management servers"),
         (GUEST, INTERNET, "443", "guest wireless must reach the internet"),
@@ -64,7 +64,7 @@ def test_permitted_traffic_gets_through(bf, gateway, source, dst, port, why) -> 
     [
         (GUEST, WORKSTATION_HOST, "445", "guest must not reach a workstation"),
         (GUEST, BIOMED_HOST, "443", "guest must not reach a biomed device"),
-        (GUEST, DC_SERVER, "443", "guest must not reach the data centre"),
+        (GUEST, DC_SERVER, "443", "guest must not reach the data center"),
         (GUEST, MGMT_SWITCH, "22", "guest must not reach the management network"),
         (WORKSTATION, MGMT_SWITCH, "22", "switches are managed from the jump host only"),
         (WORKSTATION, BIOMED_HOST, "443", "workstations must not reach biomed devices directly"),

@@ -53,7 +53,7 @@ BIOMED = ("10.10.20.50", 20, "Biomed device")
 GUEST = ("10.10.30.50", 30, "Guest wireless")
 
 DESTINATIONS = [
-    ("Data centre", "10.20.0.10", "443"),
+    ("Data center", "10.20.0.10", "443"),
     ("Internet", "8.8.8.8", "443"),
     ("Workstation", "10.10.10.50", "445"),
     ("Biomed device", "10.10.20.50", "443"),
@@ -64,15 +64,15 @@ DESTINATIONS = [
 # the SVI the policy is applied to, so tracing it would answer a question the ACL was
 # never asked and report a "failure" the design does not have.
 INTENT = {
-    ("Workstation", "Data centre"): True,
+    ("Workstation", "Data center"): True,
     ("Workstation", "Internet"): True,
     ("Workstation", "Biomed device"): False,
     ("Workstation", "Switch mgmt"): False,
-    ("Biomed device", "Data centre"): True,
+    ("Biomed device", "Data center"): True,
     ("Biomed device", "Internet"): False,
     ("Biomed device", "Workstation"): False,
     ("Biomed device", "Switch mgmt"): False,
-    ("Guest wireless", "Data centre"): False,
+    ("Guest wireless", "Data center"): False,
     ("Guest wireless", "Internet"): True,
     ("Guest wireless", "Workstation"): False,
     ("Guest wireless", "Biomed device"): False,
@@ -92,7 +92,7 @@ def load_model() -> tuple[dict, dict]:
 
 
 def design_digest(common: dict, hosts: dict) -> str:
-    """SHA-256 of the normalised model, not of the files: whitespace and key order
+    """SHA-256 of the normalized model, not of the files: whitespace and key order
     do not change a design, and an approval bound to this digest is an approval of
     exactly these values."""
     canonical = json.dumps({"common": common, "hosts": hosts}, sort_keys=True, separators=(",", ":"))

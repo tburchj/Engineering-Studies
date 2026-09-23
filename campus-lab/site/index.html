@@ -68,6 +68,9 @@
   footer { padding: 18px 32px 40px; color: var(--muted); font-size: 12.5px;
            border-top: 1px solid var(--line); max-width: 95ch; }
   footer a { color: var(--accent); }
+  .provenance { margin-top: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11.5px; line-height: 1.7; }
+  .provenance b { color: var(--text); font-weight: 500; }
   button.tab { background: var(--panel-2); color: var(--muted); border: 1px solid var(--line);
     padding: 5px 11px; border-radius: 5px; cursor: pointer; font-size: 12.5px; margin-right: 6px; }
   button.tab[aria-selected="true"] { color: var(--text); border-color: var(--accent); }
@@ -109,6 +112,7 @@
   guards against and the verification criteria are mine.
   &nbsp;—&nbsp; Timothy Burch,
   <a href="https://github.com/tburchj">github.com/tburchj</a>
+  <div id="provenance" class="provenance"></div>
 </footer>
 
 <script>
@@ -119,8 +123,23 @@ fetch("data.json").then(r => r.json()).then(data => {
   DATA = data;
   drawTopology();
   drawMatrix();
+  showProvenance();
   showIntro();
 });
+
+function showProvenance() {
+  const p = DATA.provenance;
+  if (!p) return;
+  const repo = "https://github.com/tburchj/Engineering-Studies";
+  const short = s => s.slice(0, 12);
+  document.getElementById("provenance").innerHTML =
+    `<b>Provenance.</b> Every number on this page was produced by the CI run that verified this exact design. ` +
+    `<a href="${repo}/commit/${p.commit}">commit ${short(p.commit)}</a> &middot; ` +
+    `design digest <b title="SHA-256 of the normalised model (group_vars + host_vars)">${short(p.design_sha256)}</b> &middot; ` +
+    `build digest <b title="SHA-256 of the five generated configurations">${short(p.build_sha256)}</b> &middot; ` +
+    `${p.tests} checks passed &middot; ${p.verified_at.replace("T", " ").replace("+00:00", " UTC")}. ` +
+    `A change to any value in the model changes the design digest, so an approval recorded against it is an approval of these values and no others.`;
+}
 
 function el(tag, attrs, text) {
   const node = document.createElementNS(NS, tag);
@@ -255,7 +274,11 @@ function showIntro() {
     <p class="hint">${total} traces behind the matrix above, plus trunk allowed-VLAN agreement,
     OSPF adjacency, HSRP consistency, undefined and unapplied ACLs, and the operability cases a
     security control tends to break — DHCP from a client that has no address yet, and a local
-    login account to authenticate against. It runs in CI on every commit.</p>`;
+    login account to authenticate against. Then the change itself: the jump host is traced to
+    every device's management address through both gateways, so a change cannot cut the path
+    its own rollback needs; every device archives a rollback point and logs each configured
+    line; and the committed build is scanned for anything shaped like a real credential.
+    It runs in CI on every commit, and the footer carries the digests of what it verified.</p>`;
 }
 
 function escapeHtml(s) {
